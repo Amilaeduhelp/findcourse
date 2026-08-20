@@ -473,13 +473,28 @@
 
   // ---------- Rendering ----------
 
+  function parseLinks(raw){
+    const s = normalize(raw);
+    if (!s) return [];
+    try{
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)){
+        return parsed
+          .filter(l => l && l.url)
+          .map(l => ({ label: normalize(l.label) || "වැඩි විස්තර", url: normalize(l.url) }));
+      }
+    } catch(e){ /* not JSON, fall through */ }
+    // Backward compatible: plain URL string stored directly
+    return [{ label: "වැඩි විස්තර", url: s }];
+  }
+
   function ticketText(row){
     const lines = [
       row.c_name || "",
       row.instituta_or_company ? `ආයතනය: ${row.instituta_or_company}` : "",
-      row.closing_d ? `අයදුම් කළ යුතු අවසන් දිනය: ${formatClosing(row.closing_d)}` : "",
-      row.link ? `වැඩි විස්තර: ${row.link}` : ""
+      row.closing_d ? `අයදුම් කළ යුතු අවසන් දිනය: ${formatClosing(row.closing_d)}` : ""
     ].filter(Boolean);
+    parseLinks(row.link).forEach(l => lines.push(`${l.label}: ${l.url}`));
     return lines.join("\n");
   }
 
@@ -518,9 +533,10 @@
     rows.forEach((row, i) => {
       const card = document.createElement("div");
       card.className = "ticket";
-      const linkHtml = row.link
-        ? `<a class="link" href="${normalize(row.link)}" target="_blank" rel="noopener">වැඩි විස්තර →</a><br>`
-        : "";
+      const links = parseLinks(row.link);
+      const linkHtml = links
+        .map(l => `<a class="link" href="${l.url}" target="_blank" rel="noopener">${l.label} →</a>`)
+        .join("<br>");
       card.innerHTML = `
         <h3>${normalize(row.c_name) || "නම සඳහන් නොවේ"}</h3>
         <p class="meta"><b>ආයතනය:</b> ${normalize(row.instituta_or_company) || "—"}</p>
