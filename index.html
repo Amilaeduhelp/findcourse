@@ -263,7 +263,11 @@
         <option value="" disabled selected>තෝරන්න</option>
         <option value="සා.පෙළට අඩු">සා.පෙළට අඩු</option>
         <option value="සා.පෙළ සමත්">සා.පෙළ සමත්</option>
-        <option value="උසස් පෙළ සමත්">උසස් පෙළ සමත්</option>
+        <option value="උසස් පෙළ සමත්(කලා)">උසස් පෙළ සමත්(කලා)</option>
+        <option value="උසස් පෙළ සමත්(ජීව විද්‍යා)">උසස් පෙළ සමත්(ජීව විද්‍යා)</option>
+        <option value="උසස් පෙළ සමත්(ගණිත)">උසස් පෙළ සමත්(ගණිත)</option>
+        <option value="උසස් පෙළ සමත්(වාණිජ)">උසස් පෙළ සමත්(වාණිජ)</option>
+        <option value="උසස් පෙළ සමත්(තාක්ෂණවේදය)">උසස් පෙළ සමත්(තාක්ෂණවේදය)</option>
         <option value="සහතිකපත්‍ර පාඨමාලා කර තිබේ">සහතිකපත්‍ර පාඨමාලා කර තිබේ</option>
         <option value="ඩිප්ලෝමා කර තිබේ">ඩිප්ලෝමා කර තිබේ</option>
         <option value="ජාතික ඩිප්ලෝමා කර තිබේ">ජාතික ඩිප්ලෝමා කර තිබේ</option>
@@ -345,7 +349,9 @@
 
   const TABLE = "finding_cj";
 
-  const EDU_LEVELS = [
+  // Ordered qualification tiers. The three A/L streams share one tier (index 2):
+  // any of them individually outranks O/L and is outranked by post-A/L qualifications.
+  const EDU_BASE_ORDER = [
     "සා.පෙළට අඩු",
     "සා.පෙළ සමත්",
     "උසස් පෙළ සමත්",
@@ -355,6 +361,14 @@
     "පළමු උපාධිය නිම කර තිබේ",
     "පශ්චාත් උපාධි නිමකර තිබේ"
   ];
+  // Matches "උසස් පෙළ සමත්" only when it's NOT immediately followed by "(" —
+  // i.e. a bare/generic mention with no specific stream named.
+  const GENERIC_AL_PATTERN = /උසස් පෙළ සමත්(?!\()/;
+
+  function eduRank(value){
+    const v = value.startsWith("උසස් පෙළ සමත්") ? "උසස් පෙළ සමත්" : value;
+    return EDU_BASE_ORDER.indexOf(v);
+  }
 
   const form = document.getElementById("searchForm");
   const errBox = document.getElementById("errBox");
@@ -382,7 +396,7 @@
   // ---------- Matching helpers ----------
 
   function normalize(str){
-    return (str || "").toString().trim();
+    return (str || "").toString().trim().normalize("NFC");
   }
 
   function ageMatches(dbAge, userAge){
@@ -415,11 +429,25 @@
     const s = normalize(dbEdu);
     if (!s) return true;
     if (s.includes("ඕනෑම")) return true;
+
+    // Direct / stream-specific substring match (covers comma-separated lists too)
     if (s.includes(userEdu)) return true;
+
+    // A bare "උසස් පෙළ සමත්" in the DB text (no stream in parentheses) means
+    // "any A/L stream is accepted" — match regardless of which stream the user picked.
+    if (userEdu.startsWith("උසස් පෙළ සමත්") && GENERIC_AL_PATTERN.test(s)) return true;
+
     // "X සහ ඉහළ" / "X හෝ ඉහළ" style minimum-level phrasing
     if (s.includes("ඉහළ")){
-      const baseIdx = EDU_LEVELS.findIndex(l => s.includes(l));
-      const userIdx = EDU_LEVELS.indexOf(userEdu);
+      let baseIdx = -1;
+      for (let i = 0; i < EDU_BASE_ORDER.length; i++){
+        const level = EDU_BASE_ORDER[i];
+        const found = (level === "උසස් පෙළ සමත්")
+          ? GENERIC_AL_PATTERN.test(s) || s.includes(level)
+          : s.includes(level);
+        if (found){ baseIdx = i; break; }
+      }
+      const userIdx = eduRank(userEdu);
       if (baseIdx !== -1 && userIdx !== -1) return userIdx >= baseIdx;
     }
     return false;
@@ -428,7 +456,11 @@
   function locationMatches(dbLoc, userDistrict){
     const s = normalize(dbLoc);
     if (!s) return true;
-    if (s.includes("ලංකාවේ ඕනෑම") || s.includes("ඕනෑම තැනකින්") || s.includes("ඕනෑම")) return true;
+    const anyLocationHints = [
+      "ඕනෑම", "සියලුම දිස්ත්‍රික්", "සියලු දිස්ත්‍රික්", "සර්වත්‍ර",
+      "රට පුරාම", "දිවයින පුරාම", "ලංකාව පුරා", "සියළුම දිස්ත්‍රික්"
+    ];
+    if (anyLocationHints.some(h => s.includes(h))) return true;
     return s.includes(userDistrict);
   }
 
@@ -571,10 +603,10 @@
     clearError();
 
     const age = Number(document.getElementById("age").value);
-    const gender = document.getElementById("gender").value;
-    const edu = document.getElementById("edu").value;
-    const district = document.getElementById("district").value;
-    const field = document.getElementById("field").value;
+    const gender = normalize(document.getElementById("gender").value);
+    const edu = normalize(document.getElementById("edu").value);
+    const district = normalize(document.getElementById("district").value);
+    const field = normalize(document.getElementById("field").value);
 
     if (!age || !gender || !edu || !district || !field){
       showError("කරුණාකර සියලු ප්‍රශ්න වලට පිළිතුරු දෙන්න.");
