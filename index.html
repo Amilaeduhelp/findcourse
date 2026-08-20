@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>පාඨමාලා සොයන්නා</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Sinhala:wght@500;600;700&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#152A3A;
+    --paper:#F6F3EC;
+    --teal:#0E6E6A;
+    --teal-dark:#0A4F4C;
+    --gold:#D9A441;
+    --gold-soft:#F1DDAE;
+    --line:#D8D0BE;
+    --danger:#B4483C;
+    --card:#FFFFFF;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(217,164,65,0.16), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(14,110,106,0.14), transparent 55%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans Sinhala','Noto Sans',sans-serif;
+    line-height:1.55;
+    min-height:100vh;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:40px 20px 80px;}
+
+  header.hero{
+    display:flex;flex-direction:column;gap:10px;align-items:flex-start;
+    padding-bottom:28px;margin-bottom:8px;
+    border-bottom:1px solid var(--line);
+  }
+  .eyebrow{
+    font-size:13px;letter-spacing:.14em;font-weight:700;color:var(--teal-dark);
+    text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow::before{content:"";width:22px;height:2px;background:var(--gold);display:inline-block;}
+  h1{
+    font-family:'Noto Serif Sinhala',serif;
+    font-size:clamp(30px,5vw,44px);
+    margin:0;
+    color:var(--ink);
+    font-weight:700;
+    letter-spacing:.01em;
+  }
+  .sub{max-width:56ch;color:#3E4E56;font-size:15.5px;}
+
+  /* Progress ticket rail */
+  .rail{display:flex;gap:6px;margin:26px 0 18px;}
+  .rail .seg{flex:1;height:4px;border-radius:2px;background:var(--line);overflow:hidden;position:relative;}
+  .rail .seg.on{background:var(--teal);}
+
+  form{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:8px;
+    box-shadow:0 1px 2px rgba(21,42,58,0.04);
+  }
+  .qcard{
+    padding:22px 22px 24px;
+    border-bottom:1px dashed var(--line);
+  }
+  .qcard:last-of-type{border-bottom:none;}
+  .qnum{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:26px;height:26px;border-radius:50%;
+    background:var(--teal-dark);color:#fff;
+    font-size:13px;font-weight:700;margin-right:10px;
+    font-family:'Noto Serif Sinhala',serif;
+  }
+  label.qlabel{
+    display:flex;align-items:center;
+    font-weight:600;font-size:16px;color:var(--ink);margin-bottom:10px;
+  }
+  input[type="number"], select{
+    width:100%;
+    padding:12px 14px;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    font-family:inherit;
+    font-size:15px;
+    background:#FCFBF8;
+    color:var(--ink);
+    appearance:none;
+    -webkit-appearance:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  select{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='9'><path d='M1 1l6 6 6-6' stroke='%230E6E6A' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;
+    background-position:right 14px center;
+    padding-right:38px;
+  }
+  input:focus, select:focus{
+    outline:none;
+    border-color:var(--teal);
+    box-shadow:0 0 0 3px rgba(14,110,106,0.14);
+  }
+  .hint{font-size:12.5px;color:#7A8A8F;margin-top:6px;}
+
+  .submitbar{padding:20px 22px 22px;}
+  button.submit{
+    width:100%;
+    background:var(--teal-dark);
+    color:#fff;
+    border:none;
+    padding:15px 20px;
+    border-radius:10px;
+    font-size:16px;
+    font-weight:700;
+    font-family:'Noto Sans Sinhala',sans-serif;
+    cursor:pointer;
+    letter-spacing:.01em;
+    transition:background .15s ease, transform .1s ease;
+  }
+  button.submit:hover{background:var(--teal);}
+  button.submit:active{transform:translateY(1px);}
+  button.submit:disabled{background:#9AA6A5;cursor:wait;}
+
+  .err{
+    display:none;
+    margin-top:14px;
+    padding:12px 14px;
+    border-radius:10px;
+    background:#FBEAE7;
+    border:1px solid #E9C3BB;
+    color:var(--danger);
+    font-size:14px;
+  }
+
+  /* Results */
+  #results{margin-top:34px;}
+  .results-head{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+  .results-head h2{
+    font-family:'Noto Serif Sinhala',serif;
+    font-size:22px;margin:0;color:var(--ink);
+  }
+  .copyall{
+    background:none;border:1.5px solid var(--teal);color:var(--teal-dark);
+    padding:8px 14px;border-radius:8px;font-size:13.5px;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .copyall:hover{background:var(--gold-soft);border-color:var(--gold);}
+
+  .ticket{
+    position:relative;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px 20px 18px;
+    margin-bottom:16px;
+    box-shadow:0 1px 3px rgba(21,42,58,0.05);
+  }
+  .ticket::before{
+    content:"";
+    position:absolute;left:0;top:0;bottom:0;width:6px;
+    background:linear-gradient(180deg,var(--teal),var(--gold));
+    border-radius:12px 0 0 12px;
+  }
+  .ticket h3{
+    font-family:'Noto Serif Sinhala',serif;
+    margin:0 0 6px 4px;
+    font-size:18px;color:var(--ink);
+  }
+  .ticket .meta{
+    margin:0 0 4px 4px;
+    font-size:14px;color:#3E4E56;
+  }
+  .ticket .meta b{color:var(--ink);}
+  .ticket .closing{
+    display:inline-block;margin:6px 0 2px 4px;
+    font-size:12.5px;font-weight:700;color:var(--teal-dark);
+    background:var(--gold-soft);
+    padding:3px 10px;border-radius:20px;
+  }
+  .ticket a.link{
+    display:inline-block;margin:8px 0 2px 4px;
+    font-size:13.5px;color:var(--teal-dark);font-weight:600;
+    text-decoration:none;border-bottom:1.5px solid var(--gold);
+  }
+  .ticket a.link:hover{color:var(--teal);}
+  .ticket-actions{margin-top:12px 0 0 4px;margin-top:12px;}
+  .copybtn{
+    background:none;border:1px solid var(--line);color:#3E4E56;
+    padding:6px 12px;border-radius:7px;font-size:12.5px;
+    cursor:pointer;font-family:inherit;margin-left:4px;
+  }
+  .copybtn:hover{border-color:var(--teal);color:var(--teal-dark);}
+  .copybtn.copied{border-color:var(--teal);color:var(--teal-dark);background:var(--gold-soft);}
+
+  .empty{
+    text-align:center;padding:40px 20px;color:#5C6B70;
+    background:var(--card);border:1px dashed var(--line);border-radius:12px;
+  }
+  .empty .big{font-size:34px;display:block;margin-bottom:8px;}
+
+  footer.note{
+    margin-top:40px;font-size:12.5px;color:#8B978C;text-align:center;
+  }
+
+  @media (max-width:520px){
+    .wrap{padding:26px 14px 60px;}
+    .qcard{padding:18px 16px 20px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">නොමිලේ මාර්ගෝපදේශනය</span>
+    <h1>ඔබට ගැළපෙන පාඨමාලාව සොයමු</h1>
+    <p class="sub">පහත ප්‍රශ්න 5 පිළිතුරු දෙන්න. ඔබගේ තොරතුරු වලට ගැළපෙන පාඨමාලා විස්තර ක්ෂණිකව පෙන්වයි.</p>
+  </header>
+
+  <div class="rail" id="rail">
+    <div class="seg" data-i="1"></div>
+    <div class="seg" data-i="2"></div>
+    <div class="seg" data-i="3"></div>
+    <div class="seg" data-i="4"></div>
+    <div class="seg" data-i="5"></div>
+  </div>
+
+  <form id="searchForm">
+
+    <div class="qcard">
+      <label class="qlabel" for="age"><span class="qnum">1</span>ඔබගේ වයස</label>
+      <input type="number" id="age" name="age" min="1" max="100" placeholder="උදා: 24" required>
+    </div>
+
+    <div class="qcard">
+      <label class="qlabel" for="gender"><span class="qnum">2</span>ස්ත්‍රී පුරුෂ භාවය</label>
+      <select id="gender" name="gender" required>
+        <option value="" disabled selected>තෝරන්න</option>
+        <option value="ස්ත්‍රී">ස්ත්‍රී</option>
+        <option value="පුරුෂ">පුරුෂ</option>
+        <option value="වෙනත්">වෙනත්</option>
+      </select>
+    </div>
+
+    <div class="qcard">
+      <label class="qlabel" for="edu"><span class="qnum">3</span>දැනට ලබා ඇති ඉහළ ම අධ්‍යාපන සුදුසුකම</label>
+      <select id="edu" name="edu" required>
+        <option value="" disabled selected>තෝරන්න</option>
+        <option value="සා.පෙළට අඩු">සා.පෙළට අඩු</option>
+        <option value="සා.පෙළ සමත්">සා.පෙළ සමත්</option>
+        <option value="උසස් පෙළ සමත්">උසස් පෙළ සමත්</option>
+        <option value="සහතිකපත්‍ර පාඨමාලා කර තිබේ">සහතිකපත්‍ර පාඨමාලා කර තිබේ</option>
+        <option value="ඩිප්ලෝමා කර තිබේ">ඩිප්ලෝමා කර තිබේ</option>
+        <option value="ජාතික ඩිප්ලෝමා කර තිබේ">ජාතික ඩිප්ලෝමා කර තිබේ</option>
+        <option value="පළමු උපාධිය නිම කර තිබේ">පළමු උපාධිය නිම කර තිබේ</option>
+        <option value="පශ්චාත් උපාධි නිමකර තිබේ">පශ්චාත් උපාධි නිමකර තිබේ</option>
+      </select>
+    </div>
+
+    <div class="qcard">
+      <label class="qlabel" for="district"><span class="qnum">4</span>පදිංචි දිස්ත්‍රික්කය</label>
+      <select id="district" name="district" required>
+        <option value="" disabled selected>තෝරන්න</option>
+        <option>කොළඹ</option>
+        <option>ගම්පහ</option>
+        <option>කළුතර</option>
+        <option>මහනුවර</option>
+        <option>මාතලේ</option>
+        <option>නුවරඑළිය</option>
+        <option>ගාල්ල</option>
+        <option>මාතර</option>
+        <option>හම්බන්තොට</option>
+        <option>යාපනය</option>
+        <option>කිලිනොච්චිය</option>
+        <option>මන්නාරම</option>
+        <option>වව්නියාව</option>
+        <option>මුලතිව්</option>
+        <option>මඩකලපුව</option>
+        <option>අම්පාර</option>
+        <option>ත්‍රිකුණාමලය</option>
+        <option>කුරුණෑගල</option>
+        <option>පුත්තලම</option>
+        <option>අනුරාධපුරය</option>
+        <option>පොළොන්නරුව</option>
+        <option>බදුල්ල</option>
+        <option>මොණරාගල</option>
+        <option>රත්නපුර</option>
+        <option>කෑගල්ල</option>
+      </select>
+    </div>
+
+    <div class="qcard">
+      <label class="qlabel" for="field"><span class="qnum">5</span>පාඨමාලාවක් සොයන්නේ කුමන ක්ෂේත්‍රයේ ද</label>
+      <select id="field" name="field" required>
+        <option value="" disabled selected>තෝරන්න</option>
+        <option>සෞඛ්‍ය හා වෛද්‍ය</option>
+        <option>අධ්‍යාපනය</option>
+        <option>තාක්ෂණය හා IT</option>
+        <option>ඉංජිනේරු</option>
+        <option>ව්‍යාපාර හා කළමනාකරණය</option>
+        <option>මූල්‍ය, ගිණුම්කරණය හා බැංකුකරණය</option>
+        <option>නීතිය හා රාජ්‍ය අධ්‍යයනය</option>
+        <option>විද්‍යා හා පර්යේෂණ</option>
+        <option>කෘෂිකර්මය හා පරිසරය</option>
+        <option>සමාජ විද්‍යා හා මානව ශාස්ත්‍ර</option>
+        <option>කලා, නිර්මාණ හා මාධ්‍ය</option>
+        <option>සංචාරක හා ආගන්තුක සත්කාර</option>
+        <option>ප්‍රවාහන හා ලොජිස්ටික්ස්</option>
+        <option>ක්‍රීඩා හා ශාරීරික සුවතාව</option>
+        <option>වෘත්තීය හා කාර්මික පුහුණුව</option>
+      </select>
+      <p class="hint">Submit කළ පසු ඔබට ගැළපෙන පාඨමාලා පහත පෙන්වයි.</p>
+    </div>
+
+    <div class="submitbar">
+      <button type="submit" class="submit" id="submitBtn">පාඨමාලා සොයන්න</button>
+      <div class="err" id="errBox"></div>
+    </div>
+  </form>
+
+  <div id="results"></div>
+
+  <footer class="note">දත්ත Supabase දත්ත ගබඩාවෙන් සජීවීව ලබා ගැනේ.</footer>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://uqgzlaxsnknheoerbfus.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxZ3psYXhzbmtuaGVvZXJiZnVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM5MjM2MTUsImV4cCI6MjA3OTI4MzYxNX0.IYWZ7ukx8J-GJMWy7cMk2BWnmzJmJjjE93yEmJie7nQ";
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const TABLE = "finding_cj";
+
+  const EDU_LEVELS = [
+    "සා.පෙළට අඩු",
+    "සා.පෙළ සමත්",
+    "උසස් පෙළ සමත්",
+    "සහතිකපත්‍ර පාඨමාලා කර තිබේ",
+    "ඩිප්ලෝමා කර තිබේ",
+    "ජාතික ඩිප්ලෝමා කර තිබේ",
+    "පළමු උපාධිය නිම කර තිබේ",
+    "පශ්චාත් උපාධි නිමකර තිබේ"
+  ];
+
+  const form = document.getElementById("searchForm");
+  const errBox = document.getElementById("errBox");
+  const submitBtn = document.getElementById("submitBtn");
+  const resultsEl = document.getElementById("results");
+  const rail = document.getElementById("rail");
+
+  // Fill the progress rail as fields get answered
+  form.addEventListener("input", () => {
+    const fields = ["age","gender","edu","district","field"];
+    let filled = 0;
+    fields.forEach(id => { if (document.getElementById(id).value) filled++; });
+    [...rail.children].forEach((seg,i) => seg.classList.toggle("on", i < filled));
+  });
+
+  function showError(msg){
+    errBox.textContent = msg;
+    errBox.style.display = "block";
+  }
+  function clearError(){
+    errBox.style.display = "none";
+    errBox.textContent = "";
+  }
+
+  // ---------- Matching helpers ----------
+
+  function normalize(str){
+    return (str || "").toString().trim();
+  }
+
+  function ageMatches(dbAge, userAge){
+    const s = normalize(dbAge);
+    if (!s) return true;
+    if (s.includes("ඕනෑම")) return true;
+    const nums = (s.match(/\d+/g) || []).map(Number);
+    if (nums.length === 0) return true;
+    if (nums.length === 1){
+      const n = nums[0];
+      if (s.includes("අඩු") || s.includes("පහළ")) return userAge <= n;
+      if (s.includes("වැඩි") || s.includes("ට වැඩි") || s.includes("+")) return userAge >= n;
+      // default: treat a single figure as a minimum age requirement
+      return userAge >= n;
+    }
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    return userAge >= min && userAge <= max;
+  }
+
+  function genderMatches(dbGender, userGender){
+    const s = normalize(dbGender);
+    if (!s) return true;
+    if (s.includes("ඕනෑම")) return true;
+    if (s.includes("ස්ත්‍රී") && s.includes("පුරුෂ")) return true; // "ස්ත්‍රී/පුරුෂ" style = open to both
+    return s.includes(userGender);
+  }
+
+  function eduMatches(dbEdu, userEdu){
+    const s = normalize(dbEdu);
+    if (!s) return true;
+    if (s.includes("ඕනෑම")) return true;
+    if (s.includes(userEdu)) return true;
+    // "X සහ ඉහළ" / "X හෝ ඉහළ" style minimum-level phrasing
+    if (s.includes("ඉහළ")){
+      const baseIdx = EDU_LEVELS.findIndex(l => s.includes(l));
+      const userIdx = EDU_LEVELS.indexOf(userEdu);
+      if (baseIdx !== -1 && userIdx !== -1) return userIdx >= baseIdx;
+    }
+    return false;
+  }
+
+  function locationMatches(dbLoc, userDistrict){
+    const s = normalize(dbLoc);
+    if (!s) return true;
+    if (s.includes("ලංකාවේ ඕනෑම") || s.includes("ඕනෑම තැනකින්") || s.includes("ඕනෑම")) return true;
+    return s.includes(userDistrict);
+  }
+
+  function areaMatches(dbArea, userArea){
+    const s = normalize(dbArea);
+    if (!s) return true;
+    if (s.includes("ඕනෑම")) return true;
+    return s.includes(userArea);
+  }
+
+  function parseFlexibleDate(str){
+    const s = normalize(str);
+    if (!s) return null;
+    // Try native parse first (handles YYYY-MM-DD nicely)
+    let d = new Date(s);
+    if (!isNaN(d.getTime())) return d;
+    // Try DD/MM/YYYY or DD-MM-YYYY
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m){
+      d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      if (!isNaN(d.getTime())) return d;
+    }
+    return null;
+  }
+
+  function isStillOpen(closingDate){
+    const d = parseFlexibleDate(closingDate);
+    if (!d) return true; // unknown format -> don't exclude
+    const cutoff = new Date(d);
+    cutoff.setDate(cutoff.getDate() + 3);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return today <= cutoff;
+  }
+
+  function formatClosing(closingDate){
+    const d = parseFlexibleDate(closingDate);
+    if (!d) return normalize(closingDate) || "—";
+    const opts = { year: "numeric", month: "long", day: "numeric" };
+    return d.toLocaleDateString("si-LK", opts);
+  }
+
+  // ---------- Rendering ----------
+
+  function ticketText(row){
+    const lines = [
+      row.c_name || "",
+      row.instituta_or_company ? `ආයතනය: ${row.instituta_or_company}` : "",
+      row.closing_d ? `අයදුම් කළ යුතු අවසන් දිනය: ${formatClosing(row.closing_d)}` : "",
+      row.link ? `වැඩි විස්තර: ${row.link}` : ""
+    ].filter(Boolean);
+    return lines.join("\n");
+  }
+
+  function copyToClipboard(text, btn){
+    navigator.clipboard.writeText(text).then(() => {
+      if (btn){
+        const original = btn.textContent;
+        btn.textContent = "පිටපත් විය ✓";
+        btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = original; btn.classList.remove("copied"); }, 1800);
+      }
+    });
+  }
+
+  function renderResults(rows){
+    resultsEl.innerHTML = "";
+
+    if (!rows.length){
+      resultsEl.innerHTML = `
+        <div class="empty">
+          <span class="big">🔍</span>
+          ඔබගේ තොරතුරු වලට ගැළපෙන පාඨමාලාවක් දැනට හමු නොවීය.<br>
+          පසුව නැවත උත්සාහ කරන්න, නැතහොත් වෙනත් ක්ෂේත්‍රයක් තෝරන්න.
+        </div>`;
+      return;
+    }
+
+    const head = document.createElement("div");
+    head.className = "results-head";
+    head.innerHTML = `
+      <h2>ගැළපෙන පාඨමාලා (${rows.length})</h2>
+      <button type="button" class="copyall" id="copyAllBtn">සියල්ල පිටපත් කරන්න</button>
+    `;
+    resultsEl.appendChild(head);
+
+    rows.forEach((row, i) => {
+      const card = document.createElement("div");
+      card.className = "ticket";
+      const linkHtml = row.link
+        ? `<a class="link" href="${normalize(row.link)}" target="_blank" rel="noopener">වැඩි විස්තර →</a><br>`
+        : "";
+      card.innerHTML = `
+        <h3>${normalize(row.c_name) || "නම සඳහන් නොවේ"}</h3>
+        <p class="meta"><b>ආයතනය:</b> ${normalize(row.instituta_or_company) || "—"}</p>
+        ${row.closing_d ? `<span class="closing">අවසන් දිනය: ${formatClosing(row.closing_d)}</span><br>` : ""}
+        ${linkHtml}
+        <div class="ticket-actions">
+          <button type="button" class="copybtn" data-idx="${i}">මෙය පිටපත් කරන්න</button>
+        </div>
+      `;
+      resultsEl.appendChild(card);
+    });
+
+    resultsEl.querySelectorAll(".copybtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.dataset.idx);
+        copyToClipboard(ticketText(rows[idx]), btn);
+      });
+    });
+
+    document.getElementById("copyAllBtn").addEventListener("click", (e) => {
+      const all = rows.map(ticketText).join("\n\n—\n\n");
+      copyToClipboard(all, e.target);
+    });
+
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ---------- Submit ----------
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+
+    const age = Number(document.getElementById("age").value);
+    const gender = document.getElementById("gender").value;
+    const edu = document.getElementById("edu").value;
+    const district = document.getElementById("district").value;
+    const field = document.getElementById("field").value;
+
+    if (!age || !gender || !edu || !district || !field){
+      showError("කරුණාකර සියලු ප්‍රශ්න වලට පිළිතුරු දෙන්න.");
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "සොයමින්...";
+
+    try{
+      const { data, error } = await supabaseClient.from(TABLE).select("*");
+      if (error) throw error;
+
+      const matches = (data || []).filter(row => {
+        if (!isStillOpen(row.closing_d)) return false;
+        return (
+          ageMatches(row.age, age) &&
+          genderMatches(row.gender, gender) &&
+          eduMatches(row.edu_qualifi, edu) &&
+          locationMatches(row.r_location, district) &&
+          areaMatches(row.f_area, field)
+        );
+      });
+
+      renderResults(matches);
+    } catch (err){
+      console.error(err);
+      showError("දත්ත ලබා ගැනීමේදී දෝෂයක් ඇති විය. නැවත උත්සාහ කරන්න. (" + (err.message || "") + ")");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "පාඨමාලා සොයන්න";
+    }
+  });
+</script>
+</body>
+</html>
