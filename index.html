@@ -208,6 +208,25 @@
     background:var(--card);border:1px dashed var(--line);border-radius:12px;
   }
   .empty .big{font-size:34px;display:block;margin-bottom:8px;}
+  .empty .empty-title{
+    font-size:15.5px;color:#3E4E56;max-width:46ch;margin:0 auto 6px;
+  }
+  .empty .empty-sub{
+    font-size:13.5px;color:#7A8A8F;max-width:44ch;margin:0 auto 20px;
+  }
+  .wa-btn{
+    display:inline-flex;align-items:center;gap:9px;
+    background:#25D366;color:#fff;
+    padding:12px 22px;border-radius:10px;
+    font-size:15px;font-weight:700;
+    text-decoration:none;
+    font-family:'Noto Sans Sinhala',sans-serif;
+    box-shadow:0 2px 6px rgba(37,211,102,0.28);
+    transition:background .15s ease, transform .1s ease;
+  }
+  .wa-btn:hover{background:#20BD5A;}
+  .wa-btn:active{transform:translateY(1px);}
+  .wa-btn svg{flex-shrink:0;}
 
   footer.note{
     margin-top:40px;font-size:12.5px;color:#8B978C;text-align:center;
@@ -348,6 +367,7 @@
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const TABLE = "finding_cj";
+  const WHATSAPP_NUMBER = "94716637804";
 
   // Ordered qualification tiers. The three A/L streams share one tier (index 2):
   // any of them individually outranks O/L and is outranked by post-A/L qualifications.
@@ -541,15 +561,42 @@
     });
   }
 
-  function renderResults(rows){
+  function buildWhatsAppMessage(userInfo){
+    const lines = [
+      "ආයුබෝවන්! මට ගැළපෙන පාඨමාලාවක් දැනට ඔබගේ පද්ධතියේ පෙන්වූයේ නැත.",
+      "ගැළපෙන පාඨමාලාවක් හමු වූ විගස මට දැනුම් දෙන්න.",
+      "",
+      "මගේ විස්තර:",
+      `වයස: ${userInfo.age}`,
+      `ස්ත්‍රී පුරුෂ භාවය: ${userInfo.gender}`,
+      `අධ්‍යාපන සුදුසුකම: ${userInfo.edu}`,
+      `දිස්ත්‍රික්කය: ${userInfo.district}`,
+      `කැමති ක්ෂේත්‍රය: ${userInfo.field}`
+    ];
+    return lines.join("\n");
+  }
+
+  function buildWhatsAppLink(userInfo){
+    const text = encodeURIComponent(buildWhatsAppMessage(userInfo));
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+  }
+
+  function renderResults(rows, userInfo){
     resultsEl.innerHTML = "";
 
     if (!rows.length){
+      const waLink = buildWhatsAppLink(userInfo);
       resultsEl.innerHTML = `
         <div class="empty">
           <span class="big">🔍</span>
-          ඔබගේ තොරතුරු වලට ගැළපෙන පාඨමාලාවක් දැනට හමු නොවීය.<br>
-          පසුව නැවත උත්සාහ කරන්න, නැතහොත් වෙනත් ක්ෂේත්‍රයක් තෝරන්න.
+          <p class="empty-title">ඔබගේ තොරතුරු වලට ගැළපෙන පාඨමාලාවක් දැනට අපගේ දත්ත පද්ධතියේ නොපෙන්වයි.</p>
+          <p class="empty-sub">නමුත් ගැළපෙන පාඨමාලාවක් හමු වූ විගස අපි ඔබට දැනුම් දෙන්නෙමු. පහත බොත්තම ඔබා WhatsApp ඔස්සේ අප හා සම්බන්ධ වන්න.</p>
+          <a class="wa-btn" href="${waLink}" target="_blank" rel="noopener">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2.05 22l5.25-1.38a9.86 9.86 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 1.67c2.21 0 4.29.86 5.85 2.42a8.2 8.2 0 0 1 2.43 5.82c0 4.55-3.71 8.25-8.28 8.25a8.3 8.3 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.27-4.41c0-4.55 3.71-8.25 8.26-8.25zm-4.53 4.72c-.16 0-.42.06-.64.31-.22.25-.85.83-.85 2.02 0 1.19.87 2.34.99 2.5.12.16 1.7 2.72 4.19 3.7.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.1.47-.07 1.44-.59 1.64-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.46-.28-.24-.12-1.44-.71-1.66-.79-.22-.08-.39-.12-.55.12-.16.24-.63.79-.78.95-.14.16-.28.18-.52.06-.24-.12-1.02-.38-1.94-1.2-.72-.64-1.2-1.43-1.34-1.67-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.55-1.34-.76-1.83-.2-.48-.4-.42-.55-.42h-.5z"/>
+            </svg>
+            WhatsApp මගින් සම්බන්ධ වන්න
+          </a>
         </div>`;
       return;
     }
@@ -631,7 +678,7 @@
         );
       });
 
-      renderResults(matches);
+      renderResults(matches, { age, gender, edu, district, field });
     } catch (err){
       console.error(err);
       showError("දත්ත ලබා ගැනීමේදී දෝෂයක් ඇති විය. නැවත උත්සාහ කරන්න. (" + (err.message || "") + ")");
